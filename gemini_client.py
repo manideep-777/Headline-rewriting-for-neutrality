@@ -1,15 +1,19 @@
 import os
+from dotenv import load_dotenv
 import google.generativeai as genai
 
-# It's recommended to set your API key as an environment variable
-# For example: os.environ['GEMINI_API_KEY'] = 'YOUR_API_KEY'
-# For simplicity here, we will configure it directly.
-# IMPORTANT: Replace "YOUR_API_KEY" with your actual key.
+# Load environment variables from a .env file
+load_dotenv()
+
+# Get the API key from the environment variable
+API_KEY = os.getenv("GEMINI_API_KEY")
+
 try:
-    genai.configure(api_key="AIzaSyAt1wbl0tARh6pgEyu0edlgjNQ7vNFaZOU")
+    if not API_KEY:
+        raise ValueError("GEMINI_API_KEY not found. Please set it in your .env file.")
+    genai.configure(api_key=API_KEY)
 except Exception as e:
     print(f"Error configuring Gemini API: {e}")
-    # Handle the case where the API key is not set or invalid
 
 def rewrite_headline(headline_text):
     """
