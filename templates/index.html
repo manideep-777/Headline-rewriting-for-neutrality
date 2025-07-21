@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neutral Headline Rewriter</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Neutral Headline Rewriter</h1>
+        <form id="headline-form">
+            <textarea id="headline-input" name="headline" placeholder="Enter an emotionally loaded headline..." required></textarea>
+            <button type="submit">Rewrite</button>
+        </form>
+        <div id="result-container">
+            <h2>Rewritten Headlines:</h2>
+            <ul id="result-list"></ul>
+        </div>
+    </div>
+    <script>
+        document.getElementById('headline-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const headline = document.getElementById('headline-input').value;
+            const resultList = document.getElementById('result-list');
+            
+            resultList.innerHTML = '<li>Rewriting...</li>';
+
+            const response = await fetch('/rewrite', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ headline: headline })
+            });
+
+            const data = await response.json();
+            resultList.innerHTML = ''; // Clear the list
+
+            if (data.error) {
+                const li = document.createElement('li');
+                li.textContent = 'Error: ' + data.error;
+                resultList.appendChild(li);
+            } else {
+                data.neutral_headlines.forEach(headline => {
+                    const li = document.createElement('li');
+                    li.textContent = headline;
+                    resultList.appendChild(li);
+                });
+            }
+        });
+    </script>
+</body>
+</html> 
