@@ -5,49 +5,247 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neutral Headline Rewriter</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>Neutral Headline Rewriter</h1>
-        <form id="headline-form">
-            <textarea id="headline-input" name="headline" placeholder="Enter an emotionally loaded headline..." required></textarea>
-            <button type="submit">Rewrite</button>
-        </form>
-        <div id="result-container">
-            <h2>Rewritten Headlines:</h2>
-            <ul id="result-list"></ul>
+    <div class="chat-container">
+        <!-- Sidebar for history -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-history"></i> History</h2>
+                <button id="clear-history" class="clear-btn">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="history-list" id="history-list">
+                <!-- History items will be populated here -->
+            </div>
+        </div>
+
+        <!-- Main chat area -->
+        <div class="main-chat">
+            <div class="chat-header">
+                <h1><i class="fas fa-edit"></i> Neutral Headline Rewriter</h1>
+                <p>Transform biased headlines into neutral alternatives</p>
+            </div>
+
+            <div class="chat-messages" id="chat-messages">
+                <div class="welcome-message">
+                    <div class="bot-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <h3>Welcome to Neutral Headline Rewriter!</h3>
+                        <p>Enter an emotionally loaded or biased headline, and I'll provide you with 5 neutral alternatives.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <form id="headline-form" class="chat-input-form">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="headline-input" 
+                            name="headline" 
+                            placeholder="Enter an emotionally loaded headline..."
+                            rows="1"
+                            required
+                        ></textarea>
+                        <button type="submit" id="send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
+
     <script>
+        let conversationHistory = JSON.parse(localStorage.getItem('headlineHistory') || '[]');
+
+        function saveToHistory(original, neutrals) {
+            const historyItem = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                original: original,
+                neutrals: neutrals
+            };
+            
+            conversationHistory.unshift(historyItem);
+            // Keep only last 50 items
+            if (conversationHistory.length > 50) {
+                conversationHistory = conversationHistory.slice(0, 50);
+            }
+            
+            localStorage.setItem('headlineHistory', JSON.stringify(conversationHistory));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = '';
+
+            conversationHistory.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <div class="history-preview">
+                        <div class="history-title">${item.original.substring(0, 50)}${item.original.length > 50 ? '...' : ''}</div>
+                        <div class="history-date">${new Date(item.timestamp).toLocaleDateString()}</div>
+                    </div>
+                `;
+                
+                historyItem.addEventListener('click', () => loadHistoryItem(item));
+                historyList.appendChild(historyItem);
+            });
+        }
+
+        function loadHistoryItem(item) {
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = `
+                <div class="welcome-message">
+                    <div class="bot-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <h3>Welcome to Neutral Headline Rewriter!</h3>
+                        <p>Enter an emotionally loaded or biased headline, and I'll provide you with 5 neutral alternatives.</p>
+                    </div>
+                </div>
+            `;
+            
+            addUserMessage(item.original);
+            addBotMessage(item.neutrals);
+        }
+
+        function addUserMessage(message) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user-message';
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="message-text">${message}</div>
+                </div>
+                <div class="user-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addBotMessage(headlines, isLoading = false) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot-message';
+            
+            if (isLoading) {
+                messageDiv.innerHTML = `
+                    <div class="bot-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const headlinesList = headlines.map((headline, index) => 
+                    `<div class="neutral-option">${index + 1}. ${headline}</div>`
+                ).join('');
+                
+                messageDiv.innerHTML = `
+                    <div class="bot-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-text">
+                            <h4>Here are 5 neutral alternatives:</h4>
+                            <div class="neutral-headlines">
+                                ${headlinesList}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return messageDiv;
+        }
+
+        // Auto-resize textarea
+        document.getElementById('headline-input').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Handle form submission
         document.getElementById('headline-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const headline = document.getElementById('headline-input').value;
-            const resultList = document.getElementById('result-list');
+            const headline = document.getElementById('headline-input').value.trim();
             
-            resultList.innerHTML = '<li>Rewriting...</li>';
+            if (!headline) return;
 
-            const response = await fetch('/rewrite', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ headline: headline })
-            });
+            // Add user message
+            addUserMessage(headline);
+            
+            // Clear input
+            document.getElementById('headline-input').value = '';
+            document.getElementById('headline-input').style.height = 'auto';
+            
+            // Add loading message
+            const loadingMessage = addBotMessage([], true);
 
-            const data = await response.json();
-            resultList.innerHTML = ''; // Clear the list
-
-            if (data.error) {
-                const li = document.createElement('li');
-                li.textContent = 'Error: ' + data.error;
-                resultList.appendChild(li);
-            } else {
-                data.neutral_headlines.forEach(headline => {
-                    const li = document.createElement('li');
-                    li.textContent = headline;
-                    resultList.appendChild(li);
+            try {
+                const response = await fetch('/rewrite', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ headline: headline })
                 });
+
+                const data = await response.json();
+                
+                // Remove loading message
+                loadingMessage.remove();
+
+                if (data.error) {
+                    addBotMessage([`Error: ${data.error}`]);
+                } else {
+                    addBotMessage(data.neutral_headlines);
+                    saveToHistory(headline, data.neutral_headlines);
+                }
+            } catch (error) {
+                loadingMessage.remove();
+                addBotMessage([`Error: Failed to rewrite headline. Please try again.`]);
             }
+        });
+
+        // Clear history
+        document.getElementById('clear-history').addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all history?')) {
+                conversationHistory = [];
+                localStorage.removeItem('headlineHistory');
+                renderHistory();
+            }
+        });
+
+        // Enter key handling
+        document.getElementById('headline-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('headline-form').dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Initialize history on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            renderHistory();
         });
     </script>
 </body>
